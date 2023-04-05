@@ -17,8 +17,7 @@ d_values = 64  # size of value vectors in the multi-head attention
 d_inner = 2048  # an intermediate size in the position-wise FC
 n_layers = 6  # number of layers in the Encoder and Decoder
 dropout = 0.1  # dropout probability
-positional_encoding = get_positional_encoding(d_model=d_model,
-                                              max_length=160)  # positional encodings up to the maximum possible pad-length
+positional_encoding = get_positional_encoding(d_model=d_model, max_length=160)  # positional encodings up to the maximum possible pad-length
 
 # Learning parameters
 checkpoint = None  # path to model checkpoint, None if none
@@ -137,8 +136,7 @@ def train(train_loader, model, criterion, optimizer, epoch, step):
     start_step_time = time.time()
 
     # Batches
-    for i, (source_sequences, target_sequences, source_sequence_lengths, target_sequence_lengths) in enumerate(
-            train_loader):
+    for i, (source_sequences, target_sequences, source_sequence_lengths, target_sequence_lengths) in enumerate(train_loader):
 
         # Move to default device
         source_sequences = source_sequences.to(device)  # (N, max_source_sequence_pad_length_this_batch)
@@ -150,8 +148,7 @@ def train(train_loader, model, criterion, optimizer, epoch, step):
         data_time.update(time.time() - start_data_time)
 
         # Forward prop.
-        predicted_sequences = model(source_sequences, target_sequences, source_sequence_lengths,
-                                    target_sequence_lengths)  # (N, max_target_sequence_pad_length_this_batch, vocab_size)
+        predicted_sequences = model(source_sequences, target_sequences, source_sequence_lengths, target_sequence_lengths)  # (N, max_target_sequence_pad_length_this_batch, vocab_size)
 
         # Note: If the target sequence is "<BOS> w1 w2 ... wN <EOS> <PAD> <PAD> <PAD> <PAD> ..."
         # we should consider only "w1 w2 ... wN <EOS>" as <BOS> is not predicted
@@ -227,8 +224,7 @@ def validate(val_loader, model, criterion):
             target_sequence_length = target_sequence_length.to(device)  # (1)
 
             # Forward prop.
-            predicted_sequence = model(source_sequence, target_sequence, source_sequence_length,
-                                       target_sequence_length)  # (1, target_sequence_length, vocab_size)
+            predicted_sequence = model(source_sequence, target_sequence, source_sequence_length, target_sequence_length)  # (1, target_sequence_length, vocab_size)
 
             # Note: If the target sequence is "<BOS> w1 w2 ... wN <EOS> <PAD> <PAD> <PAD> <PAD> ..."
             # we should consider only "w1 w2 ... wN <EOS>" as <BOS> is not predicted
