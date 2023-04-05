@@ -4,7 +4,10 @@ import math
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:4")
+
+
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class MultiHeadAttention(nn.Module):
@@ -506,8 +509,7 @@ class Transformer(nn.Module):
         :return: decoded target language sequences, a tensor of size (N, decoder_sequence_pad_length, vocab_size)
         """
         # Encoder
-        encoder_sequences = self.encoder(encoder_sequences,
-                                         encoder_sequence_lengths)  # (N, encoder_sequence_pad_length, d_model)
+        encoder_sequences = self.encoder(encoder_sequences, encoder_sequence_lengths)  # (N, encoder_sequence_pad_length, d_model)
 
         # Decoder
         decoder_sequences = self.decoder(decoder_sequences, decoder_sequence_lengths, encoder_sequences,
@@ -541,11 +543,11 @@ class LabelSmoothedCE(torch.nn.Module):
         """
         # Remove pad-positions and flatten
         inputs, _, _, _ = pack_padded_sequence(input=inputs,
-                                               lengths=lengths,
+                                               lengths=lengths.cpu(),
                                                batch_first=True,
                                                enforce_sorted=False)  # (sum(lengths), vocab_size)
         targets, _, _, _ = pack_padded_sequence(input=targets,
-                                                lengths=lengths,
+                                                lengths=lengths.cpu(),
                                                 batch_first=True,
                                                 enforce_sorted=False)  # (sum(lengths))
 

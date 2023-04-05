@@ -7,7 +7,7 @@ from dataloader import SequenceLoader
 from utils import *
 
 # Data parameters
-data_folder = '/media/ssd/transformer data'  # folder with data files
+DATA_FOLDER = 'data/de_en'  # folder with data files
 
 # Model parameters
 d_model = 512  # size of vectors throughout the transformer model
@@ -21,7 +21,8 @@ positional_encoding = get_positional_encoding(d_model=d_model,
                                               max_length=160)  # positional encodings up to the maximum possible pad-length
 
 # Learning parameters
-checkpoint = 'transformer_checkpoint.pth.tar'  # path to model checkpoint, None if none
+checkpoint = None  # path to model checkpoint, None if none
+# checkpoint = 'transformer_checkpoint.pth.tar'  # path to model checkpoint, None if none
 tokens_in_batch = 2000  # batch size in target language tokens
 batches_per_step = 25000 // tokens_in_batch  # perform a training step, i.e. update parameters, once every so many batches
 print_frequency = 20  # print status once every so many steps
@@ -34,7 +35,8 @@ start_epoch = 0  # start at this epoch
 betas = (0.9, 0.98)  # beta coefficients in the Adam optimizer
 epsilon = 1e-9  # epsilon term in the Adam optimizer
 label_smoothing = 0.1  # label smoothing co-efficient in the Cross Entropy loss
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # CPU isn't really practical here
+device = torch.device("cuda:4")  # CPU isn't really practical here
+# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # CPU isn't really practical here
 cudnn.benchmark = False  # since input tensor size is variable
 
 
@@ -45,12 +47,12 @@ def main():
     global checkpoint, step, start_epoch, epoch, epochs
 
     # Initialize data-loaders
-    train_loader = SequenceLoader(data_folder="/media/ssd/transformer data",
+    train_loader = SequenceLoader(data_folder=DATA_FOLDER,
                                   source_suffix="en",
                                   target_suffix="de",
                                   split="train",
                                   tokens_in_batch=tokens_in_batch)
-    val_loader = SequenceLoader(data_folder="/media/ssd/transformer data",
+    val_loader = SequenceLoader(data_folder=DATA_FOLDER,
                                 source_suffix="en",
                                 target_suffix="de",
                                 split="val",
