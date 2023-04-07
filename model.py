@@ -4,7 +4,7 @@ import math
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence
 
-device = torch.device("cuda:4")
+device = torch.device("cuda")
 
 
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -273,9 +273,8 @@ class Encoder(nn.Module):
         pad_length = encoder_sequences.size(1)  # pad-length of this batch only, varies across batches
 
         # Sum vocab embeddings and position embeddings
+        a = self.embedding(encoder_sequences)
         encoder_sequences = self.embedding(encoder_sequences) * math.sqrt(self.d_model) + self.positional_encoding[:, :pad_length, :].to(device)  # (N, pad_length, d_model)
-
-        # Dropout
         encoder_sequences = self.apply_dropout(encoder_sequences)  # (N, pad_length, d_model)
 
         # Encoder layers

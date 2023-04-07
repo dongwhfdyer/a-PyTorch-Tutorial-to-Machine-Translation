@@ -17,7 +17,7 @@ d_values = 64  # size of value vectors in the multi-head attention
 d_inner = 2048  # an intermediate size in the position-wise FC
 n_layers = 6  # number of layers in the Encoder and Decoder
 dropout = 0.1  # dropout probability
-positional_encoding = get_positional_encoding(d_model=d_model, max_length=160)  # positional encodings up to the maximum possible pad-length
+positional_encoding = get_positional_encoding(d_model=d_model, max_length=253)  # positional encodings up to the maximum possible pad-length. todo: it has been changed from 160 to 253
 
 # Learning parameters
 checkpoint = None  # path to model checkpoint, None if none
@@ -34,7 +34,7 @@ start_epoch = 0  # start at this epoch
 betas = (0.9, 0.98)  # beta coefficients in the Adam optimizer
 epsilon = 1e-9  # epsilon term in the Adam optimizer
 label_smoothing = 0.1  # label smoothing co-efficient in the Cross Entropy loss
-device = torch.device("cuda:4")  # CPU isn't really practical here
+device = torch.device("cuda")  # CPU isn't really practical here
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")  # CPU isn't really practical here
 cudnn.benchmark = False  # since input tensor size is variable
 
@@ -95,6 +95,12 @@ def main():
         # Step
         step = epoch * train_loader.n_batches // batches_per_step
 
+        # One epoch's validation
+        val_loader.create_batches()
+        validate(val_loader=val_loader,
+                 model=model,
+                 criterion=criterion)
+
         # One epoch's training
         train_loader.create_batches()
         train(train_loader=train_loader,
@@ -104,11 +110,11 @@ def main():
               epoch=epoch,
               step=step)
 
-        # One epoch's validation
-        val_loader.create_batches()
-        validate(val_loader=val_loader,
-                 model=model,
-                 criterion=criterion)
+        # # One epoch's validation
+        # val_loader.create_batches()
+        # validate(val_loader=val_loader,
+        #          model=model,
+        #          criterion=criterion)
 
         # Save checkpoint
         save_checkpoint(epoch, model, optimizer)

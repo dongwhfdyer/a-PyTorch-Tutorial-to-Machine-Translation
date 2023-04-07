@@ -7,10 +7,10 @@ import math
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # BPE Model
-bpe_model = youtokentome.BPE(model="/media/ssd/transformer data/bpe.model")
+bpe_model = youtokentome.BPE(model="data/de_en/bpe.model")
 
 # Transformer model
-checkpoint = torch.load("averaged_transformer_checkpoint.pth.tar")
+checkpoint = torch.load("transformer_checkpoint.pth.tar", map_location=device)
 model = checkpoint['model'].to(device)
 model.eval()
 

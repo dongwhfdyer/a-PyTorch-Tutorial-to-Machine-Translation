@@ -16,7 +16,7 @@ sacrebleu_in_python = False
 # Make sure the right model checkpoint is selected in translate.py
 
 # Data loader
-test_loader = SequenceLoader(data_folder="/media/ssd/transformer data",
+test_loader = SequenceLoader(data_folder="data2",
                              source_suffix="en",
                              target_suffix="de",
                              split="test",
@@ -27,12 +27,28 @@ test_loader.create_batches()
 with torch.no_grad():
     hypotheses = list()
     references = list()
-    for i, (source_sequence, target_sequence, source_sequence_length, target_sequence_length) in enumerate(
-            tqdm(test_loader, total=test_loader.n_batches)):
-        hypotheses.append(translate(source_sequence=source_sequence,
-                                    beam_size=4,
-                                    length_norm_coefficient=0.6)[0])
-        references.extend(test_loader.bpe_model.decode(target_sequence.tolist(), ignore_ids=[0, 2, 3]))
+    hypotheses_localfile = ".cache/hypotheses_test.de"
+    references_localfile = ".cache/references_test.de"
+    # check local file if there's hypotheses and references saved already then load them, otherwise translate
+    # if os.path.exists() and os.path.exists("references_test.de"):
+    if os.path.exists(hypotheses_localfile) and os.path.exists(references_localfile):
+        with codecs.open("hypotheses_test.de", "r", encoding="utf-8") as f:
+            hypotheses = f.read().splitlines()
+        with codecs.open("references_test.de", "r", encoding="utf-8") as f:
+            references = f.read().splitlines()
+    else:
+        for i, (source_sequence, target_sequence, source_sequence_length, target_sequence_length) in enumerate(
+                tqdm(test_loader, total=test_loader.n_batches)):
+            hypotheses.append(translate(source_sequence=source_sequence,
+                                        beam_size=4,
+                                        length_norm_coefficient=0.6)[0])
+            references.extend(test_loader.bpe_model.decode(target_sequence.tolist(), ignore_ids=[0, 2, 3]))
+
+        with codecs.open(hypotheses_localfile, "w", encoding="utf-8") as f:
+            f.write("\n".join(hypotheses))
+        with codecs.open(references_localfile, "w", encoding="utf-8") as f:
+            f.write("\n".join(references))
+
     if sacrebleu_in_python:
         print("\n13a tokenization, cased:\n")
         print(sacrebleu.corpus_bleu(hypotheses, [references]))
