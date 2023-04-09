@@ -7,10 +7,10 @@ import math
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # BPE Model
-bpe_model = youtokentome.BPE(model="data/de_en/bpe.model")
+bpe_model = youtokentome.BPE(model="data2/bpe.model")
 
 # Transformer model
-checkpoint = torch.load("transformer_checkpoint.pth.tar", map_location=device)
+checkpoint = torch.load("averaged_transformer_checkpoint.pth.tar", map_location=device)
 model = checkpoint['model'].to(device)
 model.eval()
 
@@ -134,4 +134,5 @@ def translate(source_sequence, beam_size=4, length_norm_coefficient=0.6):
 
 
 if __name__ == '__main__':
-    translate("It was the best of times, it was the worst of times.")
+    print(translate("It was the best of times, it was the worst of times."))
+

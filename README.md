@@ -1,36 +1,8 @@
-This is a **[PyTorch](https://pytorch.org) Tutorial to Machine Translation**.
-
-This is the sixth in [a series of tutorials](https://github.com/sgrvinod/Deep-Tutorials-for-PyTorch) I'm writing about _implementing_ cool models on your own with the amazing PyTorch library.
-
-Basic knowledge of PyTorch is assumed.
-
-If you're new to PyTorch, first read [Deep Learning with PyTorch: A 60 Minute Blitz](https://pytorch.org/tutorials/beginner/deep_learning_60min_blitz.html) and [Learning PyTorch with Examples](https://pytorch.org/tutorials/beginner/pytorch_with_examples.html).
-
-Questions, suggestions, or corrections can be posted as issues.
-
 I'm using `PyTorch 1.4` in `Python 3.6`.
 
 ---
 
-**27 Jan 2020**: Code is now available for [a PyTorch Tutorial to Super-Resolution](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Super-Resolution).
-
----
-
-# Contents
-
-[***Objective***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Machine-Translation#objective)
-
-[***Concepts***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Machine-Translation#tutorial-in-progress)
-
-[***Overview***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Machine-Translation#tutorial-in-progress)
-
-[***Implementation***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Machine-Translation#tutorial-in-progress)
-
-[***Training***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Machine-Translation#tutorial-in-progress)
-
-[***Inference***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Machine-Translation#tutorial-in-progress)
-
-[***Frequently Asked Questions***](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Machine-Translation#tutorial-in-progress)
+https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Machine-Translation#tutorial-in-progress)
 
 # Objective
 
@@ -42,22 +14,7 @@ I'm using `PyTorch 1.4` in `Python 3.6`.
 
 We will be implementing the pioneering research paper [_'Attention Is All You Need'_](https://arxiv.org/abs/1706.03762), which introduced the Transformer network to the world. A watershed moment for cutting-edge Natural Language Processing.
 
->Wir werden das wegweisende Forschungspapier [_"Attention Is All You Need"_](https://arxiv.org/abs/1706.03762) umsetzen, das das Transformer-Netzwerk in die Welt eingeführt hat. Ein Wendepunkt für die hochmoderne Natural Language Processing.
 
-Specifically, we are going to be translating from **English** to **German**. And yes, everything written here in German is straight from the horse's mouth! (The horse, of course, being the model.)
-
->Konkret werden wir vom **Englischen** ins **Deutsche** übersetzen. Und ja, alles, was hier in deutscher Sprache geschrieben wird, ist direkt aus dem Mund des Pferdes! (Das Pferd ist natürlich das Modell.)
-
-
-# Tutorial in Progress
-
-I am still writing this tutorial.
-
-<p align="center">
-<img src="./img/incomplete.jpg">
-</p>
-
-In the meantime, **you could take a look at the code** – it works!
 
 The trained model checkpoint is available [here](https://drive.google.com/drive/folders/18ltkGJ2P_cV-0AyMrbojN0Ig4JgYp9al?usp=sharing). You can use it directly with [`translate.py`](https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Machine-Translation/blob/master/translate.py).
 
