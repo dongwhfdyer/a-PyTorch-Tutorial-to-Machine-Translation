@@ -35,7 +35,6 @@ with torch.no_grad():
                                     length_norm_coefficient=0.6)[0])
         references.extend(test_loader.bpe_model.decode(target_sequence.tolist(), ignore_ids=[0, 2, 3]))
 
-
     with codecs.open("translated_test.de", "w", encoding="utf-8") as f:
         f.write("\n".join(hypotheses))
     print("\n13a tokenization, cased:\n")

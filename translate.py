@@ -135,4 +135,3 @@ def translate(source_sequence, beam_size=4, length_norm_coefficient=0.6):
 
 if __name__ == '__main__':
     print(translate("It was the best of times, it was the worst of times."))
-

@@ -533,3 +533,7 @@ class LabelSmoothedCE(torch.nn.Module):
         loss = torch.mean(loss)
 
         return loss
+
+
+if __name__ == '__main__':
+    model = Decoder(vocab_size=100, positional_encoding=100, d_model=512, n_heads=8, d_queries=64, d_values=64, d_inner=2048, n_layers=6, dropout=0.1)

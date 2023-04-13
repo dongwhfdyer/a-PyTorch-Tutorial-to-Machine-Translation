@@ -54,8 +54,8 @@ with torch.no_grad():
                     f.write("\n".join(references))
                 hypotheses = []
                 references = []
-        print("len(hypotheses): ",len(hypotheses))
-        print("len(references): ",len(references))
+        print("len(hypotheses): ", len(hypotheses))
+        print("len(references): ", len(references))
 
         with codecs.open(hypotheses_localfile, "a", encoding="utf-8") as f:
             f.write("\n".join(hypotheses))
