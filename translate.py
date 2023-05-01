@@ -2,6 +2,8 @@ import torch
 import torch.nn.functional as F
 import youtokentome
 import math
+from analog_utils import *
+
 
 # Device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -12,6 +14,9 @@ bpe_model = youtokentome.BPE(model="data2/bpe.model")
 # Transformer model
 checkpoint = torch.load("averaged_transformer_checkpoint.pth.tar", map_location=device)
 model = checkpoint['model'].to(device)
+model = AnalogSequential(convert_to_analog_mapped(model, rpu_config))
+model.remap_analog_weights()
+
 model.eval()
 
 
