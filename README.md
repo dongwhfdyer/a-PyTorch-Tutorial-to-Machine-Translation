@@ -12,7 +12,7 @@ https://github.com/sgrvinod/a-PyTorch-Tutorial-to-Machine-Translation#tutorial-i
 >Um ein Modell zu erstellen, das von einer Sprache in eine andere übersetzen kann.
 
 
-We will be implementing the pioneering research paper [_'Attention Is All You Need'_](https://arxiv.org/abs/1706.03762), which introduced the Transformer network to the world. A watershed moment for cutting-edge Natural Language Processing.
+We will be implementing the pioneering research paper [_'Attention Is All You Need'_](https://arxiv.org/abs/1706.03762), which introduced the a_Transformer network to the world. A watershed moment for cutting-edge Natural Language Processing.
 
 
 

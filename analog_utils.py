@@ -3,6 +3,7 @@ from aihwkit.simulator.configs import InferenceRPUConfig
 from aihwkit.inference import PCMLikeNoiseModel
 from aihwkit.simulator.configs.utils import WeightClipType, MappingParameter
 from aihwkit.nn.conversion import convert_to_analog_mapped
+import functools
 
 mapping = MappingParameter(max_input_size=512,
                            max_output_size=512,

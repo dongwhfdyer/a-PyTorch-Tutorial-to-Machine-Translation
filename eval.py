@@ -16,7 +16,7 @@ sacrebleu_in_python = False
 # Make sure the right model checkpoint is selected in translate.py
 
 # Data loader
-test_loader = SequenceLoader(data_folder="data2",
+test_loader = SequenceLoader(data_folder="data",
                              source_suffix="en",
                              target_suffix="de",
                              split="test",

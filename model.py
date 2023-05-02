@@ -537,11 +537,21 @@ class LabelSmoothedCE(torch.nn.Module):
 
 
 if __name__ == '__main__':
-    model = Decoder(vocab_size=100, positional_encoding=100, d_model=512, n_heads=8, d_queries=64, d_values=64, d_inner=2048, n_layers=6, dropout=0.1)
-    model = AnalogSequential(convert_to_analog_mapped(model, rpu_config))
-    model.remap_analog_weights()
-    test_sample = torch.randn(1, 10, 512)
 
-    # test forward
-    res = model(test_sample)
-    print(res.shape)
+    #---------kkuhn-block------------------------------ # init multiheadattention
+    model = MultiHeadAttention(d_model=512, n_heads=8, d_queries=64, d_values=64, dropout=0.1)
+    # get the model weights
+    model_weights = model.state_dict()
+    print("--------------------------------------------------")
+
+    #---------kkuhn-block------------------------------
+    # # ---------kkuhn-block------------------------------ # test_0
+    # model = Decoder(vocab_size=100, positional_encoding=100, d_model=512, n_heads=8, d_queries=64, d_values=64, d_inner=2048, n_layers=6, dropout=0.1)
+    # model = AnalogSequential(convert_to_analog_mapped(model, rpu_config))
+    # model.remap_analog_weights()
+    # test_sample = torch.randn(1, 10, 512)
+    #
+    # # test forward
+    # res = model(test_sample)
+    # print(res.shape)
+    # # ---------kkuhn-block------------------------------

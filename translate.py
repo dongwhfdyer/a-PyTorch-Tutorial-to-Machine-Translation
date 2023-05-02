@@ -3,19 +3,47 @@ import torch.nn.functional as F
 import youtokentome
 import math
 from analog_utils import *
-
+from aihwkit_model import a_Transformer
+from aihwkit_model import a_Encoder
+from aihwkit_model import a_Decoder
+from model import Transformer
 
 # Device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # BPE Model
-bpe_model = youtokentome.BPE(model="data2/bpe.model")
+bpe_model = youtokentome.BPE(model="data/bpe.model")
 
 # Transformer model
 checkpoint = torch.load("averaged_transformer_checkpoint.pth.tar", map_location=device)
-model = checkpoint['model'].to(device)
-model = AnalogSequential(convert_to_analog_mapped(model, rpu_config))
-model.remap_analog_weights()
+
+model_cpt = checkpoint['model'].to(device)
+
+vocab_size = model_cpt.vocab_size
+positional_encoding = model_cpt.positional_encoding
+d_inner = model_cpt.d_inner
+n_layers = model_cpt.n_layers
+dropout = model_cpt.dropout
+encoder = model_cpt.encoder
+decoder = model_cpt.decoder
+
+model = Transformer(vocab_size=vocab_size,
+                    positional_encoding=positional_encoding,
+                    d_model=512,
+                    n_heads=8,
+                    d_queries=64,
+                    d_values=64,
+                    d_inner=d_inner,
+                    n_layers=n_layers,
+                    dropout=dropout)
+
+# load weights from checkpoint
+model.encoder.load_state_dict(checkpoint['model'].encoder.state_dict())
+model.decoder.load_state_dict(checkpoint['model'].decoder.state_dict())
+model.positional_encoding=checkpoint['model'].positional_encoding
+model.to(device)
+
+print(model)
 
 model.eval()
 

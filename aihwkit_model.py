@@ -11,7 +11,7 @@ device = torch.device("cuda")
 # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-class MultiHeadAttention(nn.Module):
+class a_MultiHeadAttention(nn.Module):
     """
     The Multi-Head Attention sublayer.
     """
@@ -25,7 +25,7 @@ class MultiHeadAttention(nn.Module):
         :param dropout: dropout probability
         :param in_decoder: is this Multi-Head Attention sublayer instance in the decoder?
         """
-        super(MultiHeadAttention, self).__init__()
+        super(a_MultiHeadAttention, self).__init__()
 
         self.d_model = d_model
         self.n_heads = n_heads
@@ -37,13 +37,11 @@ class MultiHeadAttention(nn.Module):
         self.in_decoder = in_decoder
 
         # A linear projection to cast (n_heads sets of) queries from the input query sequences
-        self.cast_queries = nn.Linear(d_model, n_heads * d_queries)
-
+        self.cast_queries = AnalogLinear_(d_model, n_heads * d_queries)
         # A linear projection to cast (n_heads sets of) keys and values from the input reference sequences
-        self.cast_keys_values = nn.Linear(d_model, n_heads * (d_queries + d_values))
-
+        self.cast_keys_values = AnalogLinear_(d_model, n_heads * (d_queries + d_values))
         # A linear projection to cast (n_heads sets of) computed attention-weighted vectors to output vectors (of the same size as input query vectors)
-        self.cast_output = nn.Linear(n_heads * d_values, d_model)
+        self.cast_output = AnalogLinear_(n_heads * d_values, d_model)
 
         # Softmax layer
         self.softmax = nn.Softmax(dim=-1)
@@ -53,6 +51,12 @@ class MultiHeadAttention(nn.Module):
 
         # Dropout layer
         self.apply_dropout = nn.Dropout(dropout)
+
+    def set_weights(self, w_q, w_k, w_output):
+        # init weights with another encoder
+        self.cast_queries.set_weights(w_q.T)
+        self.cast_keys_values.set_weights(w_k.T)
+        self.cast_output.set_weights(w_output.T)
 
     def forward(self, query_sequences, key_value_sequences, key_value_sequence_lengths):
         """
@@ -76,7 +80,7 @@ class MultiHeadAttention(nn.Module):
         # Apply layer normalization
         query_sequences = self.layer_norm(query_sequences)  # (N, query_sequence_pad_length, d_model)
         # If this is self-attention, do the same for the key-value sequences (as they are the same as the query sequences)
-        # If this isn't self-attention, they will already have been normed in the last layer of the Encoder (from whence they came)
+        # If this isn't self-attention, they will already have been normed in the last layer of the a_Encoder (from whence they came)
         if self_attention:
             key_value_sequences = self.layer_norm(key_value_sequences)  # (N, key_value_sequence_pad_length, d_model)
 
@@ -201,9 +205,9 @@ class PositionWiseFCNetwork(nn.Module):
         return sequences
 
 
-class Encoder(nn.Module):
+class a_Encoder(nn.Module):
     """
-    The Encoder.
+    The a_Encoder.
     """
 
     def __init__(self, vocab_size, positional_encoding, d_model, n_heads, d_queries, d_values, d_inner, n_layers,
@@ -211,15 +215,15 @@ class Encoder(nn.Module):
         """
         :param vocab_size: size of the (shared) vocabulary
         :param positional_encoding: positional encodings up to the maximum possible pad-length
-        :param d_model: size of vectors throughout the transformer model, i.e. input and output sizes for the Encoder
+        :param d_model: size of vectors throughout the transformer model, i.e. input and output sizes for the a_Encoder
         :param n_heads: number of heads in the multi-head attention
         :param d_queries: size of query vectors (and also the size of the key vectors) in the multi-head attention
         :param d_values: size of value vectors in the multi-head attention
         :param d_inner: an intermediate size in the position-wise FC
-        :param n_layers: number of [multi-head attention + position-wise FC] layers in the Encoder
+        :param n_layers: number of [multi-head attention + position-wise FC] layers in the a_Encoder
         :param dropout: dropout probability
         """
-        super(Encoder, self).__init__()
+        super(a_Encoder, self).__init__()
 
         self.vocab_size = vocab_size
         self.positional_encoding = positional_encoding
@@ -237,7 +241,7 @@ class Encoder(nn.Module):
         # Set the positional encoding tensor to be un-update-able, i.e. gradients aren't computed
         self.positional_encoding.requires_grad = False
 
-        # Encoder layers
+        # a_Encoder layers
         self.encoder_layers = nn.ModuleList([self.make_encoder_layer() for i in range(n_layers)])
 
         # Dropout layer
@@ -248,15 +252,15 @@ class Encoder(nn.Module):
 
     def make_encoder_layer(self):
         """
-        Creates a single layer in the Encoder by combining a multi-head attention sublayer and a position-wise FC sublayer.
+        Creates a single layer in the a_Encoder by combining a multi-head attention sublayer and a position-wise FC sublayer.
         """
         # A ModuleList of sublayers
-        encoder_layer = nn.ModuleList([MultiHeadAttention(d_model=self.d_model,
-                                                          n_heads=self.n_heads,
-                                                          d_queries=self.d_queries,
-                                                          d_values=self.d_values,
-                                                          dropout=self.dropout,
-                                                          in_decoder=False),
+        encoder_layer = nn.ModuleList([a_MultiHeadAttention(d_model=self.d_model,
+                                                            n_heads=self.n_heads,
+                                                            d_queries=self.d_queries,
+                                                            d_values=self.d_values,
+                                                            dropout=self.dropout,
+                                                            in_decoder=False),
                                        PositionWiseFCNetwork(d_model=self.d_model,
                                                              d_inner=self.d_inner,
                                                              dropout=self.dropout)])
@@ -278,7 +282,7 @@ class Encoder(nn.Module):
         encoder_sequences = self.embedding(encoder_sequences) * math.sqrt(self.d_model) + self.positional_encoding[:, :pad_length, :].to(device)  # (N, pad_length, d_model)
         encoder_sequences = self.apply_dropout(encoder_sequences)  # (N, pad_length, d_model)
 
-        # Encoder layers
+        # a_Encoder layers
         for encoder_layer in self.encoder_layers:
             # Sublayers
             encoder_sequences = encoder_layer[0](query_sequences=encoder_sequences,
@@ -292,24 +296,24 @@ class Encoder(nn.Module):
         return encoder_sequences
 
 
-class Decoder(nn.Module):
+class a_Decoder(nn.Module):
     """
-    The Decoder.
+    The a_Decoder.
     """
 
     def __init__(self, vocab_size, positional_encoding, d_model, n_heads, d_queries, d_values, d_inner, n_layers, dropout):
         """
         :param vocab_size: size of the (shared) vocabulary
         :param positional_encoding: positional encodings up to the maximum possible pad-length
-        :param d_model: size of vectors throughout the transformer model, i.e. input and output sizes for the Decoder
+        :param d_model: size of vectors throughout the transformer model, i.e. input and output sizes for the a_Decoder
         :param n_heads: number of heads in the multi-head attention
         :param d_queries: size of query vectors (and also the size of the key vectors) in the multi-head attention
         :param d_values: size of value vectors in the multi-head attention
         :param d_inner: an intermediate size in the position-wise FC
-        :param n_layers: number of [multi-head attention + multi-head attention + position-wise FC] layers in the Decoder
+        :param n_layers: number of [multi-head attention + multi-head attention + position-wise FC] layers in the a_Decoder
         :param dropout: dropout probability
         """
-        super(Decoder, self).__init__()
+        super(a_Decoder, self).__init__()
 
         self.vocab_size = vocab_size
         self.positional_encoding = positional_encoding
@@ -327,7 +331,7 @@ class Decoder(nn.Module):
         # Set the positional encoding tensor to be un-update-able, i.e. gradients aren't computed
         self.positional_encoding.requires_grad = False
 
-        # Decoder layers
+        # a_Decoder layers
         self.decoder_layers = nn.ModuleList([self.make_decoder_layer() for i in range(n_layers)])
 
         # Dropout layer
@@ -341,21 +345,21 @@ class Decoder(nn.Module):
 
     def make_decoder_layer(self):
         """
-        Creates a single layer in the Decoder by combining two multi-head attention sublayers and a position-wise FC sublayer.
+        Creates a single layer in the a_Decoder by combining two multi-head attention sublayers and a position-wise FC sublayer.
         """
         # A ModuleList of sublayers
-        decoder_layer = nn.ModuleList([MultiHeadAttention(d_model=self.d_model,
-                                                          n_heads=self.n_heads,
-                                                          d_queries=self.d_queries,
-                                                          d_values=self.d_values,
-                                                          dropout=self.dropout,
-                                                          in_decoder=True),
-                                       MultiHeadAttention(d_model=self.d_model,
-                                                          n_heads=self.n_heads,
-                                                          d_queries=self.d_queries,
-                                                          d_values=self.d_values,
-                                                          dropout=self.dropout,
-                                                          in_decoder=True),
+        decoder_layer = nn.ModuleList([a_MultiHeadAttention(d_model=self.d_model,
+                                                            n_heads=self.n_heads,
+                                                            d_queries=self.d_queries,
+                                                            d_values=self.d_values,
+                                                            dropout=self.dropout,
+                                                            in_decoder=True),
+                                       a_MultiHeadAttention(d_model=self.d_model,
+                                                            n_heads=self.n_heads,
+                                                            d_queries=self.d_queries,
+                                                            d_values=self.d_values,
+                                                            dropout=self.dropout,
+                                                            in_decoder=True),
                                        PositionWiseFCNetwork(d_model=self.d_model,
                                                              d_inner=self.d_inner,
                                                              dropout=self.dropout)])
@@ -380,7 +384,7 @@ class Decoder(nn.Module):
         # Dropout
         decoder_sequences = self.apply_dropout(decoder_sequences)
 
-        # Decoder layers
+        # a_Decoder layers
         for decoder_layer in self.decoder_layers:
             # Sublayers
             decoder_sequences = decoder_layer[0](query_sequences=decoder_sequences,
@@ -400,9 +404,9 @@ class Decoder(nn.Module):
         return decoder_sequences
 
 
-class Transformer(nn.Module):
+class a_Transformer(nn.Module):
     """
-    The Transformer network.
+    The a_Transformer network.
     """
 
     def __init__(self, vocab_size, positional_encoding, d_model=512, n_heads=8, d_queries=64, d_values=64, d_inner=2048, n_layers=6, dropout=0.1):
@@ -414,10 +418,10 @@ class Transformer(nn.Module):
         :param d_queries: size of query vectors (and also the size of the key vectors) in the multi-head attention
         :param d_values: size of value vectors in the multi-head attention
         :param d_inner: an intermediate size in the position-wise FC
-        :param n_layers: number of layers in the Encoder and Decoder
+        :param n_layers: number of layers in the a_Encoder and a_Decoder
         :param dropout: dropout probability
         """
-        super(Transformer, self).__init__()
+        super(a_Transformer, self).__init__()
 
         self.vocab_size = vocab_size
         self.positional_encoding = positional_encoding
@@ -429,27 +433,27 @@ class Transformer(nn.Module):
         self.n_layers = n_layers
         self.dropout = dropout
 
-        # Encoder
-        self.encoder = Encoder(vocab_size=vocab_size,
-                               positional_encoding=positional_encoding,
-                               d_model=d_model,
-                               n_heads=n_heads,
-                               d_queries=d_queries,
-                               d_values=d_values,
-                               d_inner=d_inner,
-                               n_layers=n_layers,
-                               dropout=dropout)
+        # a_Encoder
+        self.encoder = a_Encoder(vocab_size=vocab_size,
+                                 positional_encoding=positional_encoding,
+                                 d_model=d_model,
+                                 n_heads=n_heads,
+                                 d_queries=d_queries,
+                                 d_values=d_values,
+                                 d_inner=d_inner,
+                                 n_layers=n_layers,
+                                 dropout=dropout)
 
-        # Decoder
-        self.decoder = Decoder(vocab_size=vocab_size,
-                               positional_encoding=positional_encoding,
-                               d_model=d_model,
-                               n_heads=n_heads,
-                               d_queries=d_queries,
-                               d_values=d_values,
-                               d_inner=d_inner,
-                               n_layers=n_layers,
-                               dropout=dropout)
+        # a_Decoder
+        self.decoder = a_Decoder(vocab_size=vocab_size,
+                                 positional_encoding=positional_encoding,
+                                 d_model=d_model,
+                                 n_heads=n_heads,
+                                 d_queries=d_queries,
+                                 d_values=d_values,
+                                 d_inner=d_inner,
+                                 n_layers=n_layers,
+                                 dropout=dropout)
 
         # Initialize weights
         self.init_weights()
@@ -481,10 +485,10 @@ class Transformer(nn.Module):
         :param decoder_sequence_lengths: true lengths of target language sequences, a tensor of size (N)
         :return: decoded target language sequences, a tensor of size (N, decoder_sequence_pad_length, vocab_size)
         """
-        # Encoder
+        # a_Encoder
         encoder_sequences = self.encoder(encoder_sequences, encoder_sequence_lengths)  # (N, encoder_sequence_pad_length, d_model)
 
-        # Decoder
+        # a_Decoder
         decoder_sequences = self.decoder(decoder_sequences, decoder_sequence_lengths, encoder_sequences, encoder_sequence_lengths)  # (N, decoder_sequence_pad_length, vocab_size)
 
         return decoder_sequences
@@ -537,7 +541,7 @@ class LabelSmoothedCE(torch.nn.Module):
 
 
 if __name__ == '__main__':
-    model = Decoder(vocab_size=100, positional_encoding=100, d_model=512, n_heads=8, d_queries=64, d_values=64, d_inner=2048, n_layers=6, dropout=0.1)
+    model = a_Decoder(vocab_size=100, positional_encoding=100, d_model=512, n_heads=8, d_queries=64, d_values=64, d_inner=2048, n_layers=6, dropout=0.1)
     model = AnalogSequential(convert_to_analog_mapped(model, rpu_config))
     model.remap_analog_weights()
     test_sample = torch.randn(1, 10, 512)

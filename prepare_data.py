@@ -1,8 +1,8 @@
 from utils import *
 
-download_data(data_folder="data2")
+download_data(data_folder="data")
 
-prepare_data(data_folder="data2",
+prepare_data(data_folder="data",
              euro_parl=True,
              common_crawl=True,
              news_commentary=True,
