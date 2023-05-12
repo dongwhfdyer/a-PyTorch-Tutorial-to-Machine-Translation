@@ -59,7 +59,10 @@ def translate(source_sequence, beam_size=4, length_norm_coefficient=0.6):
         encoder_sequence_lengths = torch.LongTensor([encoder_sequences_input.size(1)]).to(device)  # (1)
 
         # Encode
+        print("!!!!!!!!!!")
+        # ---------kkuhn-block------------------------------ # you can inspect the input from here.
         encoder_sequences = a_model(encoder_sequences_input, encoder_sequence_lengths)  # (1, source_sequence_length, d_model)
+        # ---------kkuhn-block------------------------------
         # encoder_sequences = model(encoder_sequences_input, encoder_sequence_lengths)  # (1, source_sequence_length, d_model)
 
         # Our hypothesis to begin with is just <BOS>
@@ -80,12 +83,12 @@ def translate(source_sequence, beam_size=4, length_norm_coefficient=0.6):
         # At this point, s is 1, because we only have 1 hypothesis to work with, i.e. "<BOS>"
         while True:
             s = hypotheses.size(0)
-            decoder_sequences = a_decoder(decoder_sequences=hypotheses,
+            decoder_sequences = a_de_model(decoder_sequences=hypotheses,
 
-                                          decoder_sequence_lengths=hypotheses_lengths,
-                                          encoder_sequences=encoder_sequences.repeat(s, 1, 1),
-                                          encoder_sequence_lengths=encoder_sequence_lengths.repeat(
-                                              s))  # (s, step, vocab_size)
+                                           decoder_sequence_lengths=hypotheses_lengths,
+                                           encoder_sequences=encoder_sequences.repeat(s, 1, 1),
+                                           encoder_sequence_lengths=encoder_sequence_lengths.repeat(
+                                               s))  # (s, step, vocab_size)
 
             # Scores at this step
             scores = decoder_sequences[:, -1, :]  # (s, vocab_size)
@@ -146,148 +149,65 @@ def translate(source_sequence, beam_size=4, length_norm_coefficient=0.6):
         return best_hypothesis, all_hypotheses
 
 
-def models_init(model_name):
-    if model_name == 'multiheadattention':
-        a_model = a_MultiHeadAttention(d_model=512,
-                                       n_heads=8,
-                                       d_queries=64,
-                                       d_values=64,
-                                       dropout=dropout).to(device)
+def models_init():
+    a_en = a_Encoder(vocab_size=vocab_size,
+                     positional_encoding=positional_encoding,
+                     d_model=512,
+                     n_heads=8,
+                     d_queries=64,
+                     d_values=64,
+                     d_inner=d_inner,
+                     n_layers=n_layers,
+                     dropout=dropout).to(device)
 
-        model = MultiHeadAttention(d_model=512,
-                                   n_heads=8,
-                                   d_queries=64,
-                                   d_values=64,
-                                   dropout=dropout).to(device)
-    elif model_name == 'positionwisefcnetwork':
-        a_model = a_PositionWiseFCNetwork(d_model=512,
-                                          d_inner=d_inner,
-                                          dropout=dropout).to(device)
+    en = Encoder(vocab_size=vocab_size,
+                 positional_encoding=positional_encoding,
+                 d_model=512,
+                 n_heads=8,
+                 d_queries=64,
+                 d_values=64,
+                 d_inner=d_inner,
+                 n_layers=n_layers,
+                 dropout=dropout).to(device)
+    checkpoint = torch.load("averaged_transformer_checkpoint.pth.tar", map_location=device)
+    en.load_state_dict(checkpoint['model'].encoder.state_dict())
 
-        model = PositionWiseFCNetwork(d_model=512,
-                                      d_inner=d_inner,
-                                      dropout=dropout).to(device)
-    elif model_name == 'encoder':
-        a_model = a_Encoder(vocab_size=vocab_size,
-                            positional_encoding=positional_encoding,
-                            d_model=512,
-                            n_heads=8,
-                            d_queries=64,
-                            d_values=64,
-                            d_inner=d_inner,
-                            n_layers=n_layers,
-                            dropout=dropout).to(device)
+    a_de = a_Decoder(vocab_size=vocab_size,
+                     positional_encoding=positional_encoding,
+                     d_model=512,
+                     n_heads=8,
+                     d_queries=64,
+                     d_values=64,
+                     d_inner=d_inner,
+                     n_layers=n_layers,
+                     dropout=dropout).to(device)
 
-        model = Encoder(vocab_size=vocab_size,
-                        positional_encoding=positional_encoding,
-                        d_model=512,
-                        n_heads=8,
-                        d_queries=64,
-                        d_values=64,
-                        d_inner=d_inner,
-                        n_layers=n_layers,
-                        dropout=dropout).to(device)
+    de = Decoder(vocab_size=vocab_size,
+                 positional_encoding=positional_encoding,
+                 d_model=512,
+                 n_heads=8,
+                 d_queries=64,
+                 d_values=64,
+                 d_inner=d_inner,
+                 n_layers=n_layers,
+                 dropout=dropout).to(device)
+    de.load_state_dict(checkpoint['model'].decoder.state_dict())
 
-    elif model_name == 'decoder':
-
-        a_model = a_Decoder(vocab_size=vocab_size,
-                            positional_encoding=positional_encoding,
-                            d_model=512,
-                            n_heads=8,
-                            d_queries=64,
-                            d_values=64,
-                            d_inner=d_inner,
-                            n_layers=n_layers,
-                            dropout=dropout).to(device)
-
-        model = Decoder(vocab_size=vocab_size,
-                        positional_encoding=positional_encoding,
-                        d_model=512,
-                        n_heads=8,
-                        d_queries=64,
-                        d_values=64,
-                        d_inner=d_inner,
-                        n_layers=n_layers,
-                        dropout=dropout).to(device)
-    elif model_name == 'transformer':
-        a_model = a_Transformer(vocab_size=vocab_size,
-                                positional_encoding=positional_encoding,
-                                d_model=512,
-                                n_heads=8,
-                                d_queries=64,
-                                d_values=64,
-                                d_inner=d_inner,
-                                n_layers=n_layers,
-                                dropout=dropout).to(device)
-        model = Transformer(vocab_size=vocab_size,
-                            positional_encoding=positional_encoding,
-                            d_model=512,
-                            n_heads=8,
-                            d_queries=64,
-                            d_values=64,
-                            d_inner=d_inner,
-                            n_layers=n_layers,
-                            dropout=dropout).to(device)
+    return en, a_en, de, a_de
 
 
-
-    else:
-        raise ValueError('model_name is not correct')
-    # log model initialization
-    print("model_name: ", model_name)
-    return model, a_model
-
-
-def models_transfer_weights(model, a_model, model_name):
+def models_transfer_weights(model, a_model, de_model, a_de_model, model_name):
     print("begin to transfer model weights")
 
-    model_dict = model.state_dict()
-    if model_name == 'multiheadattention':
-        # a_model.cast_queries.set_weights(model_dict['cast_queries.weight'], model_dict['cast_queries.bias'])
-        # a_model.cast_keys_values.set_weights(model_dict['cast_keys_values.weight'], model_dict['cast_keys_values.bias'])
-        # a_model.cast_output.set_weights(model_dict['cast_output.weight'], model_dict['cast_output.bias'])
-        #
-        # a_model.layer_norm.weight = nn.Parameter(model_dict['layer_norm.weight'])
-        # a_model.layer_norm.bias = nn.Parameter(model_dict['layer_norm.bias'])
-        # ---------kkuhn-block------------------------------ # use copy_weights function
-        a_model.copy_weights(model)
-        # ---------kkuhn-block------------------------------
-
-        # #---------kkuhn-block------------------------------ # use set_weights function
-        # a_model.set_weights(model_dict['cast_queries.weight'], model_dict['cast_queries.bias'],
-        #                     model_dict['cast_keys_values.weight'], model_dict['cast_keys_values.bias'],
-        #                     model_dict['cast_output.weight'], model_dict['cast_output.bias'],
-        #                     model_dict['layer_norm.weight'], model_dict['layer_norm.bias'])
-        # #---------kkuhn-block------------------------------
-
-    elif model_name == 'positionwisefcnetwork':
-        # a_model.fc1.set_weights(model_dict['fc1.weight'], model_dict['fc1.bias'])
-        # a_model.fc2.set_weights(model_dict['fc2.weight'], model_dict['fc2.bias'])
-        # a_model.layer_norm.weight = nn.Parameter(model_dict['layer_norm.weight'])
-        # a_model.layer_norm.bias = nn.Parameter(model_dict['layer_norm.bias'])
-        a_model.set_weights(model_dict['fc1.weight'], model_dict['fc1.bias'],
-                            model_dict['fc2.weight'], model_dict['fc2.bias'],
-                            model_dict['layer_norm.weight'], model_dict['layer_norm.bias'])
-    elif model_name == 'encoder':
-        # ---------kkuhn-block------------------------------ # set weights by custom function
-        a_model.copy_weights(model)
-        # ---------kkuhn-block------------------------------
-        # #---------kkuhn-block------------------------------ # by analogsequential
-        # a_model = AnalogSequential(convert_to_analog_mapped(model, rpu_config))
-        # a_model.remap_analog_weights()
-        # #---------kkuhn-block------------------------------
-    elif model_name == 'decoder':
-        a_model.copy_weights(model)
-    elif model_name == 'transformer':
-        a_model.copy_weights(model)
-    else:
-        raise ValueError('model_name is not correct')
-    return a_model
+    a_model.copy_weights(model)
+    a_de_model.copy_weights(de_model)
+    return a_model, a_de_model
 
 
 def models_inference(model, a_model, model_name):
     model.eval()
     a_model.eval()
+    a_de_model.eval()
     if model_name == 'multiheadattention':
 
         query_sequences_sample = torch.rand(1, 12, 512).to(device)
@@ -300,6 +220,7 @@ def models_inference(model, a_model, model_name):
         # input = (torch.randint(1, 20000, (1, 12)).to(device), torch.Tensor([12]).to(device))
         input = (torch.tensor([[4265, 4065, 3786, 4643, 3811, 19516, 3942, 4065, 3786, 20521,
                                 3811, 17399]], device='cuda:0'), torch.tensor([12], device='cuda:0'))
+
     elif model_name == 'decoder':
         input = (torch.tensor([[2]], dtype=torch.long, device=device), torch.tensor([1], dtype=torch.long, device=device), torch.rand(1, 12, 512, device=device), torch.tensor([12], dtype=torch.long, device=device))
     elif model_name == 'transformer':
@@ -329,8 +250,8 @@ if __name__ == '__main__':
     # MODEL_NAME = 'decoder'
     # MODEL_NAME = 'transformer'
 
-    model, a_model = models_init(MODEL_NAME)
-    a_model = models_transfer_weights(model, a_model, MODEL_NAME)
+    model, a_model, de_model, a_de_model = models_init()
+    a_model, a_de_model = models_transfer_weights(model, a_model, de_model, a_de_model, MODEL_NAME)
     output, a_output = models_inference(model, a_model, MODEL_NAME)
     a_error_ave = calc_norm(output, a_output)
     print("a_error_ave: ", a_error_ave)

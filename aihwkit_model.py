@@ -52,11 +52,22 @@ class a_MultiHeadAttention(nn.Module):
         # Dropout layer
         self.apply_dropout = nn.Dropout(dropout)
 
-    def set_weights(self, w_q, w_k, w_output):
+    def copy_weights(self, attention):
         # init weights with another encoder
-        self.cast_queries.set_weights(w_q.T)
-        self.cast_keys_values.set_weights(w_k.T)
-        self.cast_output.set_weights(w_output.T)
+        model_dict = attention.state_dict()
+        self.cast_queries.set_weights(model_dict['cast_queries.weight'], model_dict['cast_queries.bias'])
+        self.cast_keys_values.set_weights(model_dict['cast_keys_values.weight'], model_dict['cast_keys_values.bias'])
+        self.cast_output.set_weights(model_dict['cast_output.weight'], model_dict['cast_output.bias'])
+        self.layer_norm.weight = nn.Parameter(model_dict['layer_norm.weight'])
+        self.layer_norm.bias = nn.Parameter(model_dict['layer_norm.bias'])
+
+    def set_weights(self, w_q, b_q, w_k, b_k, w_output, b_output, layer_norm_weight, layer_norm_bias):
+        # init weights with another encoder
+        self.cast_queries.set_weights(w_q, b_q)
+        self.cast_keys_values.set_weights(w_k, b_k)
+        self.cast_output.set_weights(w_output, b_output)
+        self.layer_norm.weight = nn.Parameter(layer_norm_weight)
+        self.layer_norm.bias = nn.Parameter(layer_norm_bias)
 
     def forward(self, query_sequences, key_value_sequences, key_value_sequence_lengths):
         """
@@ -151,7 +162,7 @@ class a_MultiHeadAttention(nn.Module):
         return sequences
 
 
-class PositionWiseFCNetwork(nn.Module):
+class a_PositionWiseFCNetwork(nn.Module):
     """
     The Position-Wise Feed Forward Network sublayer.
     """
@@ -162,7 +173,7 @@ class PositionWiseFCNetwork(nn.Module):
         :param d_inner: an intermediate size
         :param dropout: dropout probability
         """
-        super(PositionWiseFCNetwork, self).__init__()
+        super(a_PositionWiseFCNetwork, self).__init__()
 
         self.d_model = d_model
         self.d_inner = d_inner
@@ -171,16 +182,22 @@ class PositionWiseFCNetwork(nn.Module):
         self.layer_norm = nn.LayerNorm(d_model)
 
         # A linear layer to project from the input size to an intermediate size
-        self.fc1 = nn.Linear(d_model, d_inner)
+        self.fc1 = AnalogLinear_(d_model, d_inner)
 
         # ReLU
         self.relu = nn.ReLU()
 
         # A linear layer to project from the intermediate size to the output size (same as the input size)
-        self.fc2 = nn.Linear(d_inner, d_model)
+        self.fc2 = AnalogLinear_(d_inner, d_model)
 
         # Dropout layer
         self.apply_dropout = nn.Dropout(dropout)
+
+    def set_weights(self, w_fc1, b_fc1, w_fc2, b_fc2, w_layer_norm, b_layer_norm):
+        self.fc1.set_weights(w_fc1, b_fc1)
+        self.fc2.set_weights(w_fc2, b_fc2)
+        self.layer_norm.weight = nn.Parameter(w_layer_norm)
+        self.layer_norm.bias = nn.Parameter(b_layer_norm)
 
     def forward(self, sequences):
         """
@@ -250,6 +267,54 @@ class a_Encoder(nn.Module):
         # Layer-norm layer
         self.layer_norm = nn.LayerNorm(d_model)
 
+    def set_weights(self, encoder):
+        pass
+
+    def copy_weights(self, encoder):
+        encoder_state = encoder.state_dict()
+        self.embedding = encoder.embedding
+        self.positional_encoding = encoder.positional_encoding
+        self.layer_norm.weight = nn.Parameter(encoder_state['layer_norm.weight'])
+        self.layer_norm.bias = nn.Parameter(encoder_state['layer_norm.bias'])
+        for layer_ind in range(self.n_layers):
+            # ---------kkuhn-block------------------------------ # not set value
+            self.encoder_layers[layer_ind][0].set_weights(encoder_state['encoder_layers.' + str(layer_ind) + '.0.cast_queries.weight'],
+                                                          encoder_state['encoder_layers.' + str(layer_ind) + '.0.cast_queries.bias'],
+                                                          encoder_state['encoder_layers.' + str(layer_ind) + '.0.cast_keys_values.weight'],
+                                                          encoder_state['encoder_layers.' + str(layer_ind) + '.0.cast_keys_values.bias'],
+                                                          encoder_state['encoder_layers.' + str(layer_ind) + '.0.cast_output.weight'],
+                                                          encoder_state['encoder_layers.' + str(layer_ind) + '.0.cast_output.bias'],
+                                                          encoder_state['encoder_layers.' + str(layer_ind) + '.0.layer_norm.weight'],
+                                                          encoder_state['encoder_layers.' + str(layer_ind) + '.0.layer_norm.bias'])
+
+            self.encoder_layers[layer_ind][1].set_weights(encoder_state['encoder_layers.' + str(layer_ind) + '.1.fc1.weight'],
+                                                          encoder_state['encoder_layers.' + str(layer_ind) + '.1.fc1.bias'],
+                                                          encoder_state['encoder_layers.' + str(layer_ind) + '.1.fc2.weight'],
+                                                          encoder_state['encoder_layers.' + str(layer_ind) + '.1.fc2.bias'],
+                                                          encoder_state['encoder_layers.' + str(layer_ind) + '.1.layer_norm.weight'],
+                                                          encoder_state['encoder_layers.' + str(layer_ind) + '.1.layer_norm.bias'])
+            # ---------kkuhn-block------------------------------
+
+            # #---------kkuhn-block------------------------------ # set value
+            # self.encoder_layers[layer_ind][0] = self.encoder_layers[layer_ind][0].set_weights(encoder_state['encoder_layers.' + str(layer_ind) + '.0.cast_queries.weight'],
+            #                                                                                   encoder_state['encoder_layers.' + str(layer_ind) + '.0.cast_queries.bias'],
+            #                                                                                   encoder_state['encoder_layers.' + str(layer_ind) + '.0.cast_keys_values.weight'],
+            #                                                                                   encoder_state['encoder_layers.' + str(layer_ind) + '.0.cast_keys_values.bias'],
+            #                                                                                   encoder_state['encoder_layers.' + str(layer_ind) + '.0.cast_output.weight'],
+            #                                                                                   encoder_state['encoder_layers.' + str(layer_ind) + '.0.cast_output.bias'],
+            #                                                                                   encoder_state['encoder_layers.' + str(layer_ind) + '.0.layer_norm.weight'],
+            #                                                                                   encoder_state['encoder_layers.' + str(layer_ind) + '.0.layer_norm.bias'])
+            #
+            # self.encoder_layers[layer_ind][1] = self.encoder_layers[layer_ind][1].set_weights(encoder_state['encoder_layers.' + str(layer_ind) + '.1.fc1.weight'],
+            #                                                                                   encoder_state['encoder_layers.' + str(layer_ind) + '.1.fc1.bias'],
+            #                                                                                   encoder_state['encoder_layers.' + str(layer_ind) + '.1.fc2.weight'],
+            #                                                                                   encoder_state['encoder_layers.' + str(layer_ind) + '.1.fc2.bias'],
+            #                                                                                   encoder_state['encoder_layers.' + str(layer_ind) + '.1.layer_norm.weight'],
+            #                                                                                   encoder_state['encoder_layers.' + str(layer_ind) + '.1.layer_norm.bias'])
+            # #---------kkuhn-block------------------------------
+
+        print("--------------------------------------------------")
+
     def make_encoder_layer(self):
         """
         Creates a single layer in the a_Encoder by combining a multi-head attention sublayer and a position-wise FC sublayer.
@@ -261,9 +326,9 @@ class a_Encoder(nn.Module):
                                                             d_values=self.d_values,
                                                             dropout=self.dropout,
                                                             in_decoder=False),
-                                       PositionWiseFCNetwork(d_model=self.d_model,
-                                                             d_inner=self.d_inner,
-                                                             dropout=self.dropout)])
+                                       a_PositionWiseFCNetwork(d_model=self.d_model,
+                                                               d_inner=self.d_inner,
+                                                               dropout=self.dropout)])
 
         return encoder_layer
 
@@ -280,7 +345,7 @@ class a_Encoder(nn.Module):
         # Sum vocab embeddings and position embeddings
         a = self.embedding(encoder_sequences)
         encoder_sequences = self.embedding(encoder_sequences) * math.sqrt(self.d_model) + self.positional_encoding[:, :pad_length, :].to(device)  # (N, pad_length, d_model)
-        encoder_sequences = self.apply_dropout(encoder_sequences)  # (N, pad_length, d_model)
+        # encoder_sequences = self.apply_dropout(encoder_sequences)  # (N, pad_length, d_model) # todo: must be reset
 
         # a_Encoder layers
         for encoder_layer in self.encoder_layers:
@@ -341,7 +406,42 @@ class a_Decoder(nn.Module):
         self.layer_norm = nn.LayerNorm(d_model)
 
         # Output linear layer that will compute logits for the vocabulary
-        self.fc = nn.Linear(d_model, vocab_size)
+        self.fc = AnalogLinear_(d_model, vocab_size)
+
+    def copy_weights(self, decoder):
+        decoder_state = decoder.state_dict()
+        self.embedding = decoder.embedding
+        self.layer_norm.weight = nn.Parameter(decoder_state['layer_norm.weight'])
+        self.layer_norm.bias = nn.Parameter(decoder_state['layer_norm.bias'])
+        self.fc.set_weights(decoder_state['fc.weight'], decoder_state['fc.bias'])
+        for layer_ind in range(self.n_layers):
+            # ---------kkuhn-block------------------------------ # not set value
+            self.decoder_layers[layer_ind][0].set_weights(decoder_state['decoder_layers.' + str(layer_ind) + '.0.cast_queries.weight'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.0.cast_queries.bias'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.0.cast_keys_values.weight'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.0.cast_keys_values.bias'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.0.cast_output.weight'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.0.cast_output.bias'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.0.layer_norm.weight'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.0.layer_norm.bias'])
+
+            self.decoder_layers[layer_ind][1].set_weights(decoder_state['decoder_layers.' + str(layer_ind) + '.1.cast_queries.weight'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.1.cast_queries.bias'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.1.cast_keys_values.weight'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.1.cast_keys_values.bias'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.1.cast_output.weight'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.1.cast_output.bias'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.1.layer_norm.weight'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.1.layer_norm.bias'])
+
+            self.decoder_layers[layer_ind][2].set_weights(decoder_state['decoder_layers.' + str(layer_ind) + '.2.fc1.weight'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.2.fc1.bias'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.2.fc2.weight'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.2.fc2.bias'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.2.layer_norm.weight'],
+                                                          decoder_state['decoder_layers.' + str(layer_ind) + '.2.layer_norm.bias'])
+            # ---------kkuhn-block------------------------------
+        print("--------------------------------------------------")
 
     def make_decoder_layer(self):
         """
@@ -360,9 +460,9 @@ class a_Decoder(nn.Module):
                                                             d_values=self.d_values,
                                                             dropout=self.dropout,
                                                             in_decoder=True),
-                                       PositionWiseFCNetwork(d_model=self.d_model,
-                                                             d_inner=self.d_inner,
-                                                             dropout=self.dropout)])
+                                       a_PositionWiseFCNetwork(d_model=self.d_model,
+                                                               d_inner=self.d_inner,
+                                                               dropout=self.dropout)])
 
         return decoder_layer
 
@@ -375,6 +475,7 @@ class a_Decoder(nn.Module):
         :param encoder_sequences: encoded source language sequences, a tensor of size (N, encoder_pad_length, d_model)
         :param encoder_sequence_lengths: true lengths of these sequences, a tensor of size (N)
         :return: decoded target language sequences, a tensor of size (N, pad_length, vocab_size)
+        a sample input can be (torch.randint(0, 100, (10, 5)).to(device), torch.randint(0, 5, (10,)).to(device), torch.randint(0, 100, (10, 5, 512)).to(device), torch.randint(0, 5, (10,)).to(device) )
         """
         pad_length = decoder_sequences.size(1)  # pad-length of this batch only, varies across batches
 
@@ -474,6 +575,13 @@ class a_Transformer(nn.Module):
         self.decoder.fc.weight = self.decoder.embedding.weight
 
         print("Model initialized.")
+
+    def copy_weights(self, transformer):
+        """
+        Copy weights from another model.
+        """
+        self.encoder.copy_weights(transformer.encoder)
+        self.decoder.copy_weights(transformer.decoder)
 
     def forward(self, encoder_sequences, decoder_sequences, encoder_sequence_lengths, decoder_sequence_lengths):
         """

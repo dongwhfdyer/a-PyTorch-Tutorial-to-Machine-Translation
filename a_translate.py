@@ -6,7 +6,7 @@ from analog_utils import *
 from aihwkit_model import a_Transformer
 from aihwkit_model import a_Encoder
 from aihwkit_model import a_Decoder
-from model import Transformer
+from model import Transformer, Encoder, Decoder
 
 # Device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -27,23 +27,64 @@ dropout = model_cpt.dropout
 encoder = model_cpt.encoder
 decoder = model_cpt.decoder
 
-model = Transformer(vocab_size=vocab_size,
-                    positional_encoding=positional_encoding,
-                    d_model=512,
-                    n_heads=8,
-                    d_queries=64,
-                    d_values=64,
-                    d_inner=d_inner,
-                    n_layers=n_layers,
-                    dropout=dropout)
+ori_encoder = Encoder(vocab_size=vocab_size,
+                      positional_encoding=positional_encoding,
+                      d_model=512,
+                      n_heads=8,
+                      d_queries=64,
+                      d_values=64,
+                      d_inner=d_inner,
+                      n_layers=n_layers,
+                      dropout=dropout).to(device)
+
+ori_decoder = Decoder(vocab_size=vocab_size,
+                      positional_encoding=positional_encoding,
+                      d_model=512,
+                      n_heads=8,
+                      d_queries=64,
+                      d_values=64,
+                      d_inner=d_inner,
+                      n_layers=n_layers,
+                      dropout=dropout).to(device)
+
+ori_encoder.load_state_dict(model_cpt.encoder.state_dict())
+ori_decoder.load_state_dict(model_cpt.decoder.state_dict())
+
+a_encoder = a_Encoder(vocab_size=vocab_size,
+                      positional_encoding=positional_encoding,
+                      d_model=512,
+                      n_heads=8,
+                      d_queries=64,
+                      d_values=64,
+                      d_inner=d_inner,
+                      n_layers=n_layers,
+                      dropout=dropout).to(device)
+
+a_decoder = a_Decoder(vocab_size=vocab_size,
+                      positional_encoding=positional_encoding,
+                      d_model=512,
+                      n_heads=8,
+                      d_queries=64,
+                      d_values=64,
+                      d_inner=d_inner,
+                      n_layers=n_layers,
+                      dropout=dropout).to(device)
 
 # load weights from checkpoint
-model.encoder.load_state_dict(checkpoint['model'].encoder.state_dict())
-model.decoder.load_state_dict(checkpoint['model'].decoder.state_dict())
-model.positional_encoding = checkpoint['model'].positional_encoding
-model.to(device)
 
-model.eval()
+
+a_encoder.copy_weights(ori_encoder)
+a_decoder.copy_weights(ori_decoder)
+
+
+# #---------kkuhn-block------------------------------ # test1
+# a_encoder.copy_weights(checkpoint['model'].encoder)
+# a_decoder.copy_weights(checkpoint['model'].decoder)
+# #---------kkuhn-block------------------------------
+# ori_encoder.eval()
+# ori_decoder.eval()
+# a_encoder.eval()
+# a_decoder.eval()
 
 
 def translate(source_sequence, beam_size=4, length_norm_coefficient=0.6):
@@ -78,7 +119,8 @@ def translate(source_sequence, beam_size=4, length_norm_coefficient=0.6):
         encoder_sequence_lengths = torch.LongTensor([encoder_sequences_input.size(1)]).to(device)  # (1)
 
         # Encode
-        encoder_sequences = model.encoder(encoder_sequences=encoder_sequences_input, encoder_sequence_lengths=encoder_sequence_lengths)  # (1, source_sequence_length, d_model)
+        encoder_sequences = a_encoder(encoder_sequences_input, encoder_sequence_lengths)  # (1, source_sequence_length, d_model)
+        a_encoder.eval()
 
         # Our hypothesis to begin with is just <BOS>
         hypotheses = torch.LongTensor([[bpe_model.subword_to_id('<BOS>')]]).to(device)  # (1, 1)
@@ -98,11 +140,12 @@ def translate(source_sequence, beam_size=4, length_norm_coefficient=0.6):
         # At this point, s is 1, because we only have 1 hypothesis to work with, i.e. "<BOS>"
         while True:
             s = hypotheses.size(0)
-            decoder_sequences = model.decoder(decoder_sequences=hypotheses,
-                                              decoder_sequence_lengths=hypotheses_lengths,
-                                              encoder_sequences=encoder_sequences.repeat(s, 1, 1),
-                                              encoder_sequence_lengths=encoder_sequence_lengths.repeat(
-                                                  s))  # (s, step, vocab_size)
+            decoder_sequences = a_decoder(decoder_sequences=hypotheses,
+
+                                          decoder_sequence_lengths=hypotheses_lengths,
+                                          encoder_sequences=encoder_sequences.repeat(s, 1, 1),
+                                          encoder_sequence_lengths=encoder_sequence_lengths.repeat(
+                                              s))  # (s, step, vocab_size)
 
             # Scores at this step
             scores = decoder_sequences[:, -1, :]  # (s, vocab_size)

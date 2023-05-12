@@ -274,7 +274,6 @@ class Encoder(nn.Module):
         pad_length = encoder_sequences.size(1)  # pad-length of this batch only, varies across batches
 
         # Sum vocab embeddings and position embeddings
-        a = self.embedding(encoder_sequences)
         encoder_sequences = self.embedding(encoder_sequences) * math.sqrt(self.d_model) + self.positional_encoding[:, :pad_length, :].to(device)  # (N, pad_length, d_model)
         encoder_sequences = self.apply_dropout(encoder_sequences)  # (N, pad_length, d_model)
 
@@ -361,7 +360,6 @@ class Decoder(nn.Module):
                                                              dropout=self.dropout)])
 
         return decoder_layer
-
     def forward(self, decoder_sequences, decoder_sequence_lengths, encoder_sequences, encoder_sequence_lengths):
         """
         Forward prop.
@@ -537,14 +535,13 @@ class LabelSmoothedCE(torch.nn.Module):
 
 
 if __name__ == '__main__':
-
-    #---------kkuhn-block------------------------------ # init multiheadattention
+    # ---------kkuhn-block------------------------------ # init multiheadattention
     model = MultiHeadAttention(d_model=512, n_heads=8, d_queries=64, d_values=64, dropout=0.1)
     # get the model weights
     model_weights = model.state_dict()
     print("--------------------------------------------------")
+    # ---------kkuhn-block------------------------------
 
-    #---------kkuhn-block------------------------------
     # # ---------kkuhn-block------------------------------ # test_0
     # model = Decoder(vocab_size=100, positional_encoding=100, d_model=512, n_heads=8, d_queries=64, d_values=64, d_inner=2048, n_layers=6, dropout=0.1)
     # model = AnalogSequential(convert_to_analog_mapped(model, rpu_config))
