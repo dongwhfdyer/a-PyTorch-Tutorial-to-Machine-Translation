@@ -16,7 +16,7 @@ class a_MultiHeadAttention(nn.Module):
     The Multi-Head Attention sublayer.
     """
 
-    def __init__(self, d_model, n_heads, d_queries, d_values, dropout, in_decoder=False):
+    def __init__(self, d_model, n_heads, d_queries, d_values, dropout, in_decoder=False, if_bias=False):
         """
         :param d_model: size of vectors throughout the transformer model, i.e. input and output sizes for this sublayer
         :param n_heads: number of heads in the multi-head attention
@@ -37,11 +37,11 @@ class a_MultiHeadAttention(nn.Module):
         self.in_decoder = in_decoder
 
         # A linear projection to cast (n_heads sets of) queries from the input query sequences
-        self.cast_queries = AnalogLinear_(d_model, n_heads * d_queries)
+        self.cast_queries = AnalogLinear_(d_model, n_heads * d_queries, bias=if_bias)
         # A linear projection to cast (n_heads sets of) keys and values from the input reference sequences
-        self.cast_keys_values = AnalogLinear_(d_model, n_heads * (d_queries + d_values))
+        self.cast_keys_values = AnalogLinear_(d_model, n_heads * (d_queries + d_values), bias=if_bias)
         # A linear projection to cast (n_heads sets of) computed attention-weighted vectors to output vectors (of the same size as input query vectors)
-        self.cast_output = AnalogLinear_(n_heads * d_values, d_model)
+        self.cast_output = AnalogLinear_(n_heads * d_values, d_model, bias=if_bias)
 
         # Softmax layer
         self.softmax = nn.Softmax(dim=-1)
@@ -167,7 +167,7 @@ class a_PositionWiseFCNetwork(nn.Module):
     The Position-Wise Feed Forward Network sublayer.
     """
 
-    def __init__(self, d_model, d_inner, dropout):
+    def __init__(self, d_model, d_inner, dropout, if_bias=False):
         """
         :param d_model: size of vectors throughout the transformer model, i.e. input and output sizes for this sublayer
         :param d_inner: an intermediate size
@@ -182,13 +182,13 @@ class a_PositionWiseFCNetwork(nn.Module):
         self.layer_norm = nn.LayerNorm(d_model)
 
         # A linear layer to project from the input size to an intermediate size
-        self.fc1 = AnalogLinear_(d_model, d_inner)
+        self.fc1 = AnalogLinear_(d_model, d_inner, bias=if_bias)
 
         # ReLU
         self.relu = nn.ReLU()
 
         # A linear layer to project from the intermediate size to the output size (same as the input size)
-        self.fc2 = AnalogLinear_(d_inner, d_model)
+        self.fc2 = AnalogLinear_(d_inner, d_model, bias=if_bias)
 
         # Dropout layer
         self.apply_dropout = nn.Dropout(dropout)
@@ -325,10 +325,12 @@ class a_Encoder(nn.Module):
                                                             d_queries=self.d_queries,
                                                             d_values=self.d_values,
                                                             dropout=self.dropout,
-                                                            in_decoder=False),
+                                                            in_decoder=False,
+                                                            if_bias=False,),
                                        a_PositionWiseFCNetwork(d_model=self.d_model,
                                                                d_inner=self.d_inner,
-                                                               dropout=self.dropout)])
+                                                               dropout=self.dropout,
+                                                               if_bias=False,)])
 
         return encoder_layer
 
@@ -406,7 +408,7 @@ class a_Decoder(nn.Module):
         self.layer_norm = nn.LayerNorm(d_model)
 
         # Output linear layer that will compute logits for the vocabulary
-        self.fc = AnalogLinear_(d_model, vocab_size)
+        self.fc = AnalogLinear_(d_model, vocab_size, bias=True)
 
     def copy_weights(self, decoder):
         decoder_state = decoder.state_dict()
@@ -453,16 +455,19 @@ class a_Decoder(nn.Module):
                                                             d_queries=self.d_queries,
                                                             d_values=self.d_values,
                                                             dropout=self.dropout,
-                                                            in_decoder=True),
+                                                            in_decoder=True,
+                                                            if_bias=True),
                                        a_MultiHeadAttention(d_model=self.d_model,
                                                             n_heads=self.n_heads,
                                                             d_queries=self.d_queries,
                                                             d_values=self.d_values,
                                                             dropout=self.dropout,
-                                                            in_decoder=True),
+                                                            in_decoder=True,
+                                                            if_bias=True),
                                        a_PositionWiseFCNetwork(d_model=self.d_model,
                                                                d_inner=self.d_inner,
-                                                               dropout=self.dropout)])
+                                                               dropout=self.dropout,
+                                                               if_bias=True)])
 
         return decoder_layer
 
@@ -483,7 +488,7 @@ class a_Decoder(nn.Module):
         decoder_sequences = self.embedding(decoder_sequences) * math.sqrt(self.d_model) + self.positional_encoding[:, :pad_length, :].to(device)  # (N, pad_length, d_model)
 
         # Dropout
-        decoder_sequences = self.apply_dropout(decoder_sequences)
+        # decoder_sequences = self.apply_dropout(decoder_sequences)
 
         # a_Decoder layers
         for decoder_layer in self.decoder_layers:

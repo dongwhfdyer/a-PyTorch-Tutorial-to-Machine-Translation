@@ -1,3 +1,15 @@
+# kuhn notes
+
+For transformer's encoder and decoder, there are some difference between their linear layer.
+
+```
+AnalogLinear_ = functools.partial(AnalogLinear, bias=True, rpu_config=rpu_config) # for encoder
+AnalogLinear_2 = functools.partial(AnalogLinear, bias=True, rpu_config=rpu_config) # for decoder
+
+```
+
+---
+
 I'm using `PyTorch 1.4` in `Python 3.6`.
 
 ---

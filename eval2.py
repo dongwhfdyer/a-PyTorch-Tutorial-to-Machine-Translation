@@ -1,6 +1,7 @@
 import torch
 import sacrebleu
-from translate import translate
+from translate import translate # toggle aiwhkit or torch
+# from a_translate import translate
 from tqdm import tqdm
 from dataloader import SequenceLoader
 import youtokentome
@@ -16,11 +17,12 @@ sacrebleu_in_python = False
 # Make sure the right model checkpoint is selected in translate.py
 
 # Data loader
-test_loader = SequenceLoader(data_folder="data",
+test_loader = SequenceLoader(data_folder="/home/pcl/proj/attn/data",
                              source_suffix="en",
                              target_suffix="de",
                              split="test",
                              tokens_in_batch=None)
+print(test_loader.n_batches)
 test_loader.create_batches()
 
 # Evaluate

@@ -360,6 +360,7 @@ class Decoder(nn.Module):
                                                              dropout=self.dropout)])
 
         return decoder_layer
+
     def forward(self, decoder_sequences, decoder_sequence_lengths, encoder_sequences, encoder_sequence_lengths):
         """
         Forward prop.

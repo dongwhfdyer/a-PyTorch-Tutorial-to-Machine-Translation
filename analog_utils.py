@@ -93,8 +93,10 @@ def create_rpu_config(modifier_noise, tile_size=512, dac_res=256, adc_res=256):
     return rpu_config
 
 
-# rpu_config = create_rpu_config(0.1)
-rpu_config = create_ideal_rpu_config()
+rpu_config = create_rpu_config(0.1)
+# rpu_config = create_ideal_rpu_config()
 
 
-AnalogLinear_ = functools.partial(AnalogLinear, bias=False, rpu_config=rpu_config)
+# AnalogLinear_ = functools.partial(AnalogLinear, bias=False, rpu_config=rpu_config)
+AnalogLinear_ = functools.partial(AnalogLinear, rpu_config=rpu_config)
+# AnalogLinear_2 = functools.partial(AnalogLinear, bias=True, rpu_config=rpu_config) # todo. In encoder, bias is False, in decoder, bias is True

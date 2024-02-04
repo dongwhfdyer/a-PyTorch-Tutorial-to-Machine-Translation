@@ -7,7 +7,7 @@ from dataloader import SequenceLoader
 from utils import *
 
 # Data parameters
-DATA_FOLDER = 'data/de_en'  # folder with data files
+DATA_FOLDER = 'data'  # folder with data files
 
 # Model parameters
 d_model = 512  # size of vectors throughout the transformer model

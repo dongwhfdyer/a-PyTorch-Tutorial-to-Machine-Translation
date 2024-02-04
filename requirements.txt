@@ -2,3 +2,4 @@ youtokentome
 wget
 tqdm
 Cython
+sacrebleu

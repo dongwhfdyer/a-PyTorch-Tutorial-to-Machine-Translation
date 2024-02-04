@@ -15,7 +15,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 bpe_model = youtokentome.BPE(model="data/bpe.model")
 
 # Transformer model
-checkpoint = torch.load("averaged_transformer_checkpoint.pth.tar", map_location=device)
+# checkpoint = torch.load("transformer_checkpoint.pth.tar", map_location=device)
+checkpoint = torch.load("pretrained_transformer_checkpoint.pth.tar", map_location=device)
 
 model_cpt = checkpoint['model'].to(device)
 
